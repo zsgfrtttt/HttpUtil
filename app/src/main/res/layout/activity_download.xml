@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/iv"
+        android:scaleType="centerCrop"
+        android:layout_width="200dp"
+        android:layout_height="200dp"/>
+
+    <SeekBar
+        android:id="@+id/progress"
+        android:layout_margin="10dp"
+        android:max="100"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btn_pause"
+        android:layout_margin="10dp"
+        android:max="100"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="暂停"
+        android:onClick="pause"/>
+
+    <Button
+        android:id="@+id/btn_start"
+        android:layout_margin="10dp"
+        android:max="100"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="开始"
+        android:onClick="start"/>
+
+</LinearLayout>

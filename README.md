@@ -22,6 +22,7 @@
 **1.下载文件**
 
 ```java
+ Downloader.init(this);
  DownloadManager.getInstance().download(url, new DownloadCallback() {
 
             @Override

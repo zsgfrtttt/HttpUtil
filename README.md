@@ -1,9 +1,5 @@
 # HttpUtil
-包含两个库：下载库和请求库，可以自行选择独立依赖
-```
-implementation 'com.github.zsgfrtttt:HttpUtil:download-core:1.0.1@aar'
-implementation 'com.github.zsgfrtttt:HttpUtil:http-core:1.0.1@aar'
-```
+包含两个库：下载库和请求库
 
 
 ### 引入依赖 

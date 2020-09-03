@@ -4,7 +4,7 @@ android {
     compileSdkVersion 29
     defaultConfig {
         applicationId "com.csz.app"
-        minSdkVersion 29
+        minSdkVersion 16
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
@@ -21,6 +21,7 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation project(':download-core')
-    implementation project(':http-core')
+    implementation 'com.github.zsgfrtttt:HttpUtil:1.0.1'
+   // implementation project(':download-core')
+   // implementation project(':http-core')
 }

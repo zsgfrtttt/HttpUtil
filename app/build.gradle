@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
     defaultConfig {
         applicationId "com.csz.app"
         minSdkVersion 16
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -21,7 +21,7 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'com.github.zsgfrtttt:HttpUtil:1.0.1'
-   // implementation project(':download-core')
-   // implementation project(':http-core')
+   // implementation 'com.github.zsgfrtttt:HttpUtil:1.0.1'
+    implementation project(':download-core')
+    implementation project(':http-core')
 }

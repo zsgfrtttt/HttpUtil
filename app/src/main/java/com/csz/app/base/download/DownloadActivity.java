@@ -26,7 +26,7 @@ public class DownloadActivity extends AppCompatActivity {
 
     private ImageView iv;
     private SeekBar seekBar;
-    private String url = "https://big1.vqs.com/zqw/20191121/A17AFDD0DFBA14BC53F80A6A06185C95.apk";
+    private String url = "https://oss-miaoyin.looyu.vip/android/4.0.2app-miaoyin-release.apk";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

@@ -14,7 +14,12 @@
 ```
 在Module的build.gradle在添加以下代码
 ```
-	implementation 'com.github.zsgfrtttt:HttpUtil:1.0.2'
+	##方式1 (包含下载库和请求封装库）
+	implementation 'com.github.zsgfrtttt:HttpUtil:1.1.0'
+	##方式2 (子库拆分依赖，需要同时依赖okhttp）
+	implementation 'com.github.zsgfrtttt.HttpUtil:download-core:1.1.0@aar'
+    	implementation 'com.github.zsgfrtttt.HttpUtil:http-core:1.1.0@aar'
+    	implementation ("com.squareup.okhttp3:okhttp:4.2.1")
 ```
 
 ### 基本使用
@@ -23,17 +28,12 @@
 
 ```java
  Downloader.init(this);
- DownloadManager.getInstance().download(url, new DownloadCallback() {
+DownloadManager.getInstance().download(url, new DownloadCallback() {
 
             @Override
             public void onSuccess(final File file) {
-                //由于系统原因file的length和MD5会有延迟
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                Log.i("csz","onSuccess   "+ file.length());
+                Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -42,13 +42,8 @@
             }
 
             @Override
-            public void progress(final int progress) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        seekBar.setProgress(progress);
-                    }
-                });
+            public void onProgress(final int progress) {
+                seekBar.setProgress(progress);
             }
         });
 ```

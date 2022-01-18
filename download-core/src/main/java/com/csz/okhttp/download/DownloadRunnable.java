@@ -89,7 +89,7 @@ public class DownloadRunnable implements Runnable {
                 InputStream inputStream = response.body().byteStream();
                 int len = 0;
                 long progress = mEntity.getProgress_position();
-                while ((len = inputStream.read(bytes)) != -1) {
+                while ((len = inputStream.read(bytes)) != -1 && !mDone) {
                     pendingCurrentThread();
                     initlizeOutputFile(file); // pending == true
                     fileOutputStream.write(bytes, 0, len);
@@ -97,7 +97,7 @@ public class DownloadRunnable implements Runnable {
                     progress += len;
                     incrementStart += len;
                     mEntity.setProgress_position(progress);
-                  //  DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                    //  DownloadDBHepler.getInstance().insertOrReplace(mEntity);
                     long l = totalProgress.addAndGet(len);
                     invokeCallback(new Runnable() {
                         @Override
@@ -112,7 +112,6 @@ public class DownloadRunnable implements Runnable {
                 }
                 //inputStream必须关闭,否则文件可能不是最终写入文件
                 CloseUtil.close(inputStream, randomAccessFile, fileOutputStream);
-                mDone = true;
             } catch (IOException e) {
                 Log.i("csz", "DownloadRunnable   " + e.getMessage());
                 e.printStackTrace();
@@ -124,13 +123,13 @@ public class DownloadRunnable implements Runnable {
                 });
             } finally {
                 CloseUtil.close(randomAccessFile, fileOutputStream);
-                if (mDone) {
-                    DownloadDBHepler.getInstance().insertOrReplace(mEntity);
-                }
                 incrementStart = mEntity.getProgress_position() + start;
-                if (checkDownloadCompleted(file, incrementStart)) return;
+                if (!mDone) {
+                    DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                    if (checkDownloadCompleted(file, incrementStart)) return;
+                }
                 mRetryCount++;
-                if (mRetryCount == MAX_RETRY){
+                if (mRetryCount == MAX_RETRY) {
                     DownloadManager.getInstance().finish(url);
                     invokeCallback(new Runnable() {
                         @Override
@@ -170,7 +169,7 @@ public class DownloadRunnable implements Runnable {
                 fileOutputStream.flush();
                 pending = true;
                 CloseUtil.close(randomAccessFile, fileOutputStream);
-           //     DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                //     DownloadDBHepler.getInstance().insertOrReplace(mEntity);
                 mPauseLatch.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -191,6 +190,7 @@ public class DownloadRunnable implements Runnable {
         if (incrementStart > end) {
             //等于0证明多线程的其他任务也下载完成
             if (totalProgress.get() == contentLength) {
+                mDone = true;
                 DownloadManager.getInstance().finish(url);
                 invokeCallback(new Runnable() {
                     @Override
@@ -207,11 +207,11 @@ public class DownloadRunnable implements Runnable {
     public void pause() {
         if (mPauseLatch == null) {
             mPauseLatch = new CountDownLatch(1);
-          //  DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+            //  DownloadDBHepler.getInstance().insertOrReplace(mEntity);
         } else {
             if (mPauseLatch.getCount() != 1) {
                 mPauseLatch = new CountDownLatch(1);
-         //       DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                //       DownloadDBHepler.getInstance().insertOrReplace(mEntity);
             }
         }
     }
@@ -220,6 +220,10 @@ public class DownloadRunnable implements Runnable {
         if (mPauseLatch != null && mPauseLatch.getCount() == 1) {
             mPauseLatch.countDown();
         }
+    }
+
+    public void done() {
+        mDone = true;
     }
 
     /**

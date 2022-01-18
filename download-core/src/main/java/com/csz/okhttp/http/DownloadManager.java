@@ -153,7 +153,12 @@ public class DownloadManager {
 
     public void finish(String url) {
         mDownloadTask.remove(url);
-        mDownloadRunnables.remove(url);
+        List<DownloadRunnable> runnables = mDownloadRunnables.remove(url);
+        if (runnables != null){
+            for (DownloadRunnable runnable : runnables) {
+                runnable.done();
+            }
+        }
     }
 
     /**

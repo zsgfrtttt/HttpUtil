@@ -39,8 +39,8 @@ public class DownloadActivity extends AppCompatActivity {
         DownloadManager.getInstance().download(url, new DownloadCallback() {
 
             @Override
-            public void onSuccess(final File file) { 
-                Log.i("csz","onSuccess   "+ file.length() +"   " + MD5Util.getFileMD5(file)); //225461208  cb3f257daa7187b892f857d858539213
+            public void onSuccess(final File file) {
+                Log.i("csz","onSuccess   "+ file.length()); //225461208  cb3f257daa7187b892f857d858539213
                 Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
             }
 
@@ -64,5 +64,11 @@ public class DownloadActivity extends AppCompatActivity {
 
     public void start(View view) {
         DownloadManager.getInstance().resume(url);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        DownloadManager.getInstance().finish(url);
     }
 }

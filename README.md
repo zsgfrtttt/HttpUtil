@@ -23,17 +23,12 @@
 
 ```java
  Downloader.init(this);
- DownloadManager.getInstance().download(url, new DownloadCallback() {
+DownloadManager.getInstance().download(url, new DownloadCallback() {
 
             @Override
             public void onSuccess(final File file) {
-                //由于系统原因file的length和MD5会有延迟
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                Log.i("csz","onSuccess   "+ file.length());
+                Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -42,13 +37,8 @@
             }
 
             @Override
-            public void progress(final int progress) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        seekBar.setProgress(progress);
-                    }
-                });
+            public void onProgress(final int progress) {
+                seekBar.setProgress(progress);
             }
         });
 ```

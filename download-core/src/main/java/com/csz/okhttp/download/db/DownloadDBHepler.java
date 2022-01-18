@@ -1,9 +1,7 @@
-package com.csz.okhttp.download;
+package com.csz.okhttp.download.db;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-
-import com.csz.okhttp.download.db.DownloadEntity;
 
 import org.json.JSONException;
 import org.json.JSONObject;

@@ -2,7 +2,7 @@ package com.csz.okhttp;
 
 import android.content.Context;
 
-import com.csz.okhttp.download.DownloadDBHepler;
+import com.csz.okhttp.download.db.DownloadDBHepler;
 import com.csz.okhttp.download.FileStorageManager;
 
 /**

@@ -1,12 +1,12 @@
 package com.csz.okhttp.download;
 
 import android.annotation.SuppressLint;
-import android.os.Handler;
 import android.os.Process;
 import android.util.Log;
 
 import androidx.arch.core.executor.ArchTaskExecutor;
 
+import com.csz.okhttp.download.db.DownloadDBHepler;
 import com.csz.okhttp.download.db.DownloadEntity;
 import com.csz.okhttp.http.DownloadCallback;
 import com.csz.okhttp.http.DownloadManager;

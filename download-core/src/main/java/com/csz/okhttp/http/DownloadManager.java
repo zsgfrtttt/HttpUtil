@@ -5,8 +5,7 @@ import android.util.Log;
 
 import androidx.arch.core.executor.ArchTaskExecutor;
 
-import com.csz.okhttp.R;
-import com.csz.okhttp.download.DownloadDBHepler;
+import com.csz.okhttp.download.db.DownloadDBHepler;
 import com.csz.okhttp.download.DownloadRunnable;
 import com.csz.okhttp.download.db.DownloadEntity;
 

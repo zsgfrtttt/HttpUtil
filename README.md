@@ -14,7 +14,7 @@
 ```
 在Module的build.gradle在添加以下代码
 ```
-	implementation 'com.github.zsgfrtttt:HttpUtil:1.0.2'
+	implementation 'com.github.zsgfrtttt:HttpUtil:1.1.0'
 ```
 
 ### 基本使用

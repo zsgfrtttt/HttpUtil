@@ -15,6 +15,7 @@ import com.csz.okhttp.http.HttpManager;
 import com.csz.okhttp.util.CloseUtil;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +31,8 @@ import okhttp3.Response;
  */
 public class DownloadRunnable implements Runnable {
 
+    private static final int MAX_RETRY = 3;
+
     /**
      * 记录当前的下载文件需要多少个线程
      */
@@ -44,6 +47,10 @@ public class DownloadRunnable implements Runnable {
     private CountDownLatch mPauseLatch;
     private int mRetryCount;
     private int progress;
+    private boolean pending;
+    private long incrementStart;
+    private RandomAccessFile randomAccessFile = null;
+    private FileOutputStream fileOutputStream = null;
 
     public DownloadRunnable(String url, long start, long end, long contentLength, AtomicLong totalProgress, DownloadCallback downloadCallback, DownloadEntity entity) {
         this.url = url;
@@ -53,7 +60,6 @@ public class DownloadRunnable implements Runnable {
         this.totalProgress = totalProgress;
         this.mDownloadCallback = downloadCallback;
         this.mEntity = entity;
-        Log.i("csz","start   " +start + "    end  " +end);
     }
 
     @SuppressLint("RestrictedApi")
@@ -63,14 +69,11 @@ public class DownloadRunnable implements Runnable {
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
         File file = FileStorageManager.getInstance().getFileByName(url);
-        long incrementStart = start + mEntity.getProgress_position();
-        if (checkDownloadCompleted(file, incrementStart)) return;
+        incrementStart = start + mEntity.getProgress_position();
 
-        RandomAccessFile randomAccessFile = null;
-        FileOutputStream fileOutputStream = null;
-
-        while (!mDone && mRetryCount < 3) {
+        while (!mDone && mRetryCount < MAX_RETRY) {
             try {
+                if (checkDownloadCompleted(file, incrementStart)) return;
                 Response response = HttpManager.getInstance().syncRequest(url, incrementStart, end);
                 if (response == null) {
                     invokeCallback(new Runnable() {
@@ -81,48 +84,35 @@ public class DownloadRunnable implements Runnable {
                     });
                     return;
                 }
-                randomAccessFile = new RandomAccessFile(file, "rw");
-                randomAccessFile.seek(incrementStart);
-                fileOutputStream = new FileOutputStream(randomAccessFile.getFD());
+                initlizeOutputFile(file);
                 byte[] bytes = new byte[getAvailByteSize()];
                 InputStream inputStream = response.body().byteStream();
                 int len = 0;
                 long progress = mEntity.getProgress_position();
                 while ((len = inputStream.read(bytes)) != -1) {
                     pendingCurrentThread();
+                    initlizeOutputFile(file); // pending == true
                     fileOutputStream.write(bytes, 0, len);
+                    fileOutputStream.flush();
                     progress += len;
+                    incrementStart += len;
                     mEntity.setProgress_position(progress);
-                    int finalLen = len;
+                  //  DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                    long l = totalProgress.addAndGet(len);
                     invokeCallback(new Runnable() {
                         @Override
                         public void run() {
-                            long l = totalProgress.addAndGet(finalLen);
                             int off = (int) (l * 100 / contentLength);
-                            if (DownloadRunnable.this.progress != off){
+                            if (DownloadRunnable.this.progress != off) {
                                 DownloadRunnable.this.progress = off;
-                                Log.i("csz","progress   " + DownloadRunnable.this.progress);
                                 mDownloadCallback.onProgress(DownloadRunnable.this.progress);
                             }
-
                         }
                     });
-                    fileOutputStream.flush();
-                    DownloadDBHepler.getInstance().insertOrReplace(mEntity);
                 }
                 //inputStream必须关闭,否则文件可能不是最终写入文件
                 CloseUtil.close(inputStream, randomAccessFile, fileOutputStream);
                 mDone = true;
-                //等于0证明多线程的其他任务也下载完成
-                if (totalProgress.get() == 0) {
-                    DownloadManager.getInstance().finish(url);
-                    invokeCallback(new Runnable() {
-                        @Override
-                        public void run() {
-                            mDownloadCallback.onSuccess(file);
-                        }
-                    });
-                }
             } catch (IOException e) {
                 Log.i("csz", "DownloadRunnable   " + e.getMessage());
                 e.printStackTrace();
@@ -134,13 +124,33 @@ public class DownloadRunnable implements Runnable {
                 });
             } finally {
                 CloseUtil.close(randomAccessFile, fileOutputStream);
-                DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                if (mDone) {
+                    DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+                }
                 incrementStart = mEntity.getProgress_position() + start;
                 if (checkDownloadCompleted(file, incrementStart)) return;
                 mRetryCount++;
+                if (mRetryCount == MAX_RETRY){
+                    DownloadManager.getInstance().finish(url);
+                    invokeCallback(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDownloadCallback.onFailure(HttpError.RETRY_ERROR.getCode(), HttpError.RETRY_ERROR.getMsg());
+                        }
+                    });
+                }
             }
         }
 
+    }
+
+    private void initlizeOutputFile(File file) throws IOException {
+        if (pending || fileOutputStream == null || randomAccessFile == null) {
+            pending = false;
+            randomAccessFile = new RandomAccessFile(file, "rwd");
+            randomAccessFile.seek(incrementStart);
+            fileOutputStream = new FileOutputStream(randomAccessFile.getFD());
+        }
     }
 
     @SuppressLint("RestrictedApi")
@@ -151,11 +161,16 @@ public class DownloadRunnable implements Runnable {
     }
 
     /**
+     * 只捕获InterruptedException，不捕获IOException
      * 挂起当前线程
      */
-    private void pendingCurrentThread() {
+    private void pendingCurrentThread() throws IOException {
         if (mPauseLatch != null && mPauseLatch.getCount() == 1) {
             try {
+                fileOutputStream.flush();
+                pending = true;
+                CloseUtil.close(randomAccessFile, fileOutputStream);
+           //     DownloadDBHepler.getInstance().insertOrReplace(mEntity);
                 mPauseLatch.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -192,11 +207,11 @@ public class DownloadRunnable implements Runnable {
     public void pause() {
         if (mPauseLatch == null) {
             mPauseLatch = new CountDownLatch(1);
-            DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+          //  DownloadDBHepler.getInstance().insertOrReplace(mEntity);
         } else {
             if (mPauseLatch.getCount() != 1) {
                 mPauseLatch = new CountDownLatch(1);
-                DownloadDBHepler.getInstance().insertOrReplace(mEntity);
+         //       DownloadDBHepler.getInstance().insertOrReplace(mEntity);
             }
         }
     }

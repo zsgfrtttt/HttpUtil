@@ -7,7 +7,8 @@ public enum HttpError {
 
     NETWORK_ERROR(10,"请求服务器异常"),
     CONTENT_LENGTH_ERROR(11,"content length -1"),
-    TASK_RUNNING_ERROR(12,"任务执行中");
+    TASK_RUNNING_ERROR(12,"任务执行中"),
+    RETRY_ERROR(13,"重试次数超限");
 
 
     private int code;

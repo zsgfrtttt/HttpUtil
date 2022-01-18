@@ -39,8 +39,8 @@ public class DownloadActivity extends AppCompatActivity {
         DownloadManager.getInstance().download(url, new DownloadCallback() {
 
             @Override
-            public void onSuccess(final File file) { //  225461208   e7f5e25d790547c3b320d8f5d139623b   d377d22efce3efa0fb76b276c7139411
-                Log.i("csz","onSuccess   "+ file.length() +"   " + MD5Util.getFileMD5(file)); //225461208  cb3f257daa7187b892f857d858539213    bf04e9cca2d88a46830b4e75b8577318
+            public void onSuccess(final File file) { 
+                Log.i("csz","onSuccess   "+ file.length() +"   " + MD5Util.getFileMD5(file)); //225461208  cb3f257daa7187b892f857d858539213
                 Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
             }
 

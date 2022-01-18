@@ -21,9 +21,9 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.1.0'
-    //implementation 'com.github.zsgfrtttt:HttpUtil:1.1.1'
-    //implementation 'com.github.zsgfrtttt.HttpUtil:download-core:1.1.1@aar'
-    //implementation 'com.github.zsgfrtttt.HttpUtil:http-core:1.1.1@aar'
+    //implementation 'com.github.zsgfrtttt:HttpUtil:1.1.2'
+    //implementation 'com.github.zsgfrtttt.HttpUtil:download-core:1.1.2@aar'
+    //implementation 'com.github.zsgfrtttt.HttpUtil:http-core:1.1.2@aar'
     //implementation ("com.squareup.okhttp3:okhttp:4.2.1")
     implementation project(':download-core')
     implementation project(':http-core')

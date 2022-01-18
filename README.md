@@ -14,7 +14,12 @@
 ```
 在Module的build.gradle在添加以下代码
 ```
+	##方式1 (包含下载库和请求封装库）
 	implementation 'com.github.zsgfrtttt:HttpUtil:1.1.0'
+	##方式2 (子库拆分依赖，需要同时依赖okhttp）
+	implementation 'com.github.zsgfrtttt.HttpUtil:download-core:1.1.0@aar'
+    	implementation 'com.github.zsgfrtttt.HttpUtil:http-core:1.1.0@aar'
+    	implementation ("com.squareup.okhttp3:okhttp:4.2.1")
 ```
 
 ### 基本使用

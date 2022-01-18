@@ -88,8 +88,6 @@ public class DownloadRunnable implements Runnable {
                 InputStream inputStream = response.body().byteStream();
                 int len = 0;
                 long progress = mEntity.getProgress_position();
-                //增加已下载的字节
-                totalProgress.addAndGet(progress);
                 while ((len = inputStream.read(bytes)) != -1) {
                     pendingCurrentThread();
                     fileOutputStream.write(bytes, 0, len);
@@ -130,7 +128,6 @@ public class DownloadRunnable implements Runnable {
             } finally {
                 CloseUtil.close(randomAccessFile, fileOutputStream);
                 DownloadDBHepler.getInstance().insertOrReplace(mEntity);
-
                 incrementStart = mEntity.getProgress_position() + start;
                 if (checkDownloadCompleted(file, incrementStart)) return;
                 mRetryCount++;
@@ -168,7 +165,8 @@ public class DownloadRunnable implements Runnable {
      */
     @SuppressLint("RestrictedApi")
     private boolean checkDownloadCompleted(File file, long incrementStart) {
-        if (incrementStart >= end) {
+        //不能incrementStart >= end , 例如 start:0  end:9  长度是10 ，+9 == 9
+        if (incrementStart > end) {
             //增加已下载的字节
             totalProgress.addAndGet(end - start);
             invokeCallback(new Runnable() {

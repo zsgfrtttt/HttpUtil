@@ -157,7 +157,7 @@ public class DownloadManager {
     }
 
     /**
-     * 开启下载任务
+     * 开启下载任务,例如长度25 分段 0-9 | 10 - 19 | 20 -24
      *
      * @param url
      * @param length
@@ -194,6 +194,8 @@ public class DownloadManager {
                 } else {
                     entity = cache.get(i);
                 }
+                //增加已下载的字节
+                totalProgress.addAndGet(entity.getProgress_position());
                 DownloadRunnable downloadRunnable = new DownloadRunnable.Request().url(url).start(start).end(end)
                         .contentLength(length).downloadCallback(callback)
                         .threadCount(atomicInteger).totalProgress(totalProgress).entity(entity).build();

@@ -171,7 +171,6 @@ public class DownloadManager {
         DownloadEntity entity;
         int threadCount = getAvailableThread(length);
         long segment = length / threadCount;
-        AtomicInteger atomicInteger = new AtomicInteger(threadCount);
         AtomicLong totalProgress = new AtomicLong();
         long start, end;
         List<DownloadRunnable> allDownloadList = new ArrayList<>();
@@ -198,7 +197,7 @@ public class DownloadManager {
                 totalProgress.addAndGet(entity.getProgress_position());
                 DownloadRunnable downloadRunnable = new DownloadRunnable.Request().url(url).start(start).end(end)
                         .contentLength(length).downloadCallback(callback)
-                        .threadCount(atomicInteger).totalProgress(totalProgress).entity(entity).build();
+                        .totalProgress(totalProgress).entity(entity).build();
                 allDownloadList.add(downloadRunnable);
                 mThreadPool.execute(downloadRunnable);
             }

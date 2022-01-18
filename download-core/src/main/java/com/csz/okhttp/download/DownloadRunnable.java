@@ -33,7 +33,6 @@ public class DownloadRunnable implements Runnable {
     /**
      * 记录当前的下载文件需要多少个线程
      */
-    private final AtomicInteger threadCount;
     private final AtomicLong totalProgress;
     private final String url;
     private final long start;
@@ -44,16 +43,17 @@ public class DownloadRunnable implements Runnable {
     private boolean mDone = false;
     private CountDownLatch mPauseLatch;
     private int mRetryCount;
+    private int progress;
 
-    public DownloadRunnable(String url, long start, long end, long contentLength, AtomicInteger threadCount, AtomicLong totalProgress, DownloadCallback downloadCallback, DownloadEntity entity) {
+    public DownloadRunnable(String url, long start, long end, long contentLength, AtomicLong totalProgress, DownloadCallback downloadCallback, DownloadEntity entity) {
         this.url = url;
         this.start = start;
         this.end = end;
         this.contentLength = contentLength;
-        this.threadCount = threadCount;
         this.totalProgress = totalProgress;
         this.mDownloadCallback = downloadCallback;
         this.mEntity = entity;
+        Log.i("csz","start   " +start + "    end  " +end);
     }
 
     @SuppressLint("RestrictedApi")
@@ -97,16 +97,24 @@ public class DownloadRunnable implements Runnable {
                     invokeCallback(new Runnable() {
                         @Override
                         public void run() {
-                            mDownloadCallback.onProgress((int) (totalProgress.addAndGet(finalLen) * 100 / contentLength));
+                            long l = totalProgress.addAndGet(finalLen);
+                            int off = (int) (l * 100 / contentLength);
+                            if (DownloadRunnable.this.progress != off){
+                                DownloadRunnable.this.progress = off;
+                                Log.i("csz","progress   " + DownloadRunnable.this.progress);
+                                mDownloadCallback.onProgress(DownloadRunnable.this.progress);
+                            }
+
                         }
                     });
                     fileOutputStream.flush();
+                    DownloadDBHepler.getInstance().insertOrReplace(mEntity);
                 }
                 //inputStream必须关闭,否则文件可能不是最终写入文件
                 CloseUtil.close(inputStream, randomAccessFile, fileOutputStream);
                 mDone = true;
                 //等于0证明多线程的其他任务也下载完成
-                if (threadCount.decrementAndGet() == 0) {
+                if (totalProgress.get() == 0) {
                     DownloadManager.getInstance().finish(url);
                     invokeCallback(new Runnable() {
                         @Override
@@ -124,7 +132,6 @@ public class DownloadRunnable implements Runnable {
                         mDownloadCallback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
                     }
                 });
-
             } finally {
                 CloseUtil.close(randomAccessFile, fileOutputStream);
                 DownloadDBHepler.getInstance().insertOrReplace(mEntity);
@@ -167,16 +174,8 @@ public class DownloadRunnable implements Runnable {
     private boolean checkDownloadCompleted(File file, long incrementStart) {
         //不能incrementStart >= end , 例如 start:0  end:9  长度是10 ，+9 == 9
         if (incrementStart > end) {
-            //增加已下载的字节
-            totalProgress.addAndGet(end - start);
-            invokeCallback(new Runnable() {
-                @Override
-                public void run() {
-                    mDownloadCallback.onProgress((int) (totalProgress.get() * 100 / contentLength));
-                }
-            });
             //等于0证明多线程的其他任务也下载完成
-            if (threadCount.decrementAndGet() == 0) {
+            if (totalProgress.get() == contentLength) {
                 DownloadManager.getInstance().finish(url);
                 invokeCallback(new Runnable() {
                     @Override
@@ -222,12 +221,11 @@ public class DownloadRunnable implements Runnable {
         } else if (remain >= 1024 * 24) {
             return 1024 * 24;
         } else {
-            return (int) remain;
+            return 1024 * 8;
         }
     }
 
     public static class Request {
-        private AtomicInteger threadCount;
         private String url;
         private long start;
         private long end;
@@ -235,11 +233,6 @@ public class DownloadRunnable implements Runnable {
         private DownloadCallback mDownloadCallback;
         private DownloadEntity mEntity;
         private AtomicLong mTotalProgress;
-
-        public Request threadCount(AtomicInteger threadCount) {
-            this.threadCount = threadCount;
-            return this;
-        }
 
         public Request url(String url) {
             this.url = url;
@@ -277,7 +270,7 @@ public class DownloadRunnable implements Runnable {
         }
 
         public DownloadRunnable build() {
-            return new DownloadRunnable(url, start, end, contentLength, threadCount, mTotalProgress, mDownloadCallback, mEntity);
+            return new DownloadRunnable(url, start, end, contentLength, mTotalProgress, mDownloadCallback, mEntity);
         }
     }
 }

@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -35,7 +36,10 @@ public class HttpManager {
     }
 
     private HttpManager() {
-        mOkHttpClient = new OkHttpClient();
+        mOkHttpClient = new OkHttpClient.Builder()
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .connectTimeout(60, TimeUnit.SECONDS).build();
     }
 
     /**
@@ -62,8 +66,8 @@ public class HttpManager {
      * @param url
      * @return
      */
-    public Response syncRequest(String url,long start,long end) {
-        Request request = new Request.Builder().url(url).header("Range","bytes="+start+"-"+end).build();
+    public Response syncRequest(String url, long start, long end) {
+        Request request = new Request.Builder().url(url).header("Range", "bytes=" + start + "-" + end).build();
         Response response = null;
         try {
             response = mOkHttpClient.newCall(request).execute();
@@ -98,11 +102,11 @@ public class HttpManager {
 
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                if (callback != null){
+                if (callback != null) {
                     ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
                         @Override
                         public void run() {
-                            callback.onFailure(HttpError.NETWORK_ERROR.getCode(),e.getMessage());
+                            callback.onFailure(HttpError.NETWORK_ERROR.getCode(), e.getMessage());
                         }
                     });
                 }
@@ -111,11 +115,11 @@ public class HttpManager {
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 if (callback == null) return;
-                if (!response.isSuccessful()){
+                if (!response.isSuccessful()) {
                     ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
                         @Override
                         public void run() {
-                            callback.onFailure(response.code(),response.message());
+                            callback.onFailure(response.code(), response.message());
                         }
                     });
                 } else {
@@ -126,8 +130,8 @@ public class HttpManager {
                     int len = 0;
                     long total = response.body().contentLength();
                     long progress = 0;
-                    while ((len = inputStream.read(bytes)) != -1){
-                        fileOutputStream.write(bytes,0,len);
+                    while ((len = inputStream.read(bytes)) != -1) {
+                        fileOutputStream.write(bytes, 0, len);
                         progress += len;
                         long finalProgress = progress;
                         ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {

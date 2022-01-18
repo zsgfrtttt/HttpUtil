@@ -1,7 +1,11 @@
 package com.csz.okhttp.http;
 
+import android.annotation.SuppressLint;
 import android.util.Log;
 
+import androidx.arch.core.executor.ArchTaskExecutor;
+
+import com.csz.okhttp.R;
 import com.csz.okhttp.download.DownloadDBHepler;
 import com.csz.okhttp.download.DownloadRunnable;
 import com.csz.okhttp.download.db.DownloadEntity;
@@ -59,41 +63,56 @@ public class DownloadManager {
         mDownloadRunnables = Collections.synchronizedMap(new HashMap<String, List<DownloadRunnable>>());
     }
 
+    @SuppressLint("RestrictedApi")
     public void download(final String url, final DownloadCallback callback) {
         if (mDownloadTask.contains(url)) {
             if (callback != null) {
-                callback.onFailure(HttpError.TASK_RUNNING_ERROR.getCode(), HttpError.TASK_RUNNING_ERROR.getMsg());
+                invokeCallback(callback, new Runnable() {
+                    @Override
+                    public void run() {
+                        callback.onFailure(HttpError.TASK_RUNNING_ERROR.getCode(), HttpError.TASK_RUNNING_ERROR.getMsg());
+                    }
+                });
             }
             return;
         }
         mDownloadTask.add(url);
 
         final List<DownloadEntity> list = DownloadDBHepler.getInstance().getAll(url);
-        Log.i("csz","list  "+ list.size());
         HttpManager.getInstance().asyncRequest(url, new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 finish(url);
-                if (callback != null) {
-                    callback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
-                }
+                invokeCallback(callback, new Runnable() {
+                    @Override
+                    public void run() {
+                        callback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
+                    }
+                });
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                if (!response.isSuccessful() ) {
+                if (!response.isSuccessful()) {
                     finish(url);
-                    if (callback != null) {
-                        callback.onFailure(response.code(), response.message());
-                    }
+                    invokeCallback(callback, new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onFailure(response.code(), response.message());
+                        }
+                    });
                     return;
                 }
                 long length = response.body().contentLength();
-                if (length == -1 ) {
+                Log.i("csz", "contentLEngth   " + length);
+                if (length == -1) {
                     finish(url);
-                    if (callback != null) {
-                        callback.onFailure(HttpError.CONTENT_LENGTH_ERROR.getCode(), HttpError.CONTENT_LENGTH_ERROR.getMsg());
-                    }
+                    invokeCallback(callback, new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onFailure(HttpError.CONTENT_LENGTH_ERROR.getCode(), HttpError.CONTENT_LENGTH_ERROR.getMsg());
+                        }
+                    });
                     return;
                 }
                 handleDownload(url, length, callback, list);
@@ -106,7 +125,7 @@ public class DownloadManager {
         if (contains) {
             synchronized (DownloadManager.class) {
                 List<DownloadRunnable> runnables = mDownloadRunnables.get(url);
-                if (runnables != null){
+                if (runnables != null) {
                     for (DownloadRunnable runnable : runnables) {
                         runnable.pause();
                     }
@@ -120,7 +139,7 @@ public class DownloadManager {
         if (contains) {
             synchronized (DownloadManager.class) {
                 List<DownloadRunnable> runnables = mDownloadRunnables.get(url);
-                if (runnables != null){
+                if (runnables != null) {
                     for (DownloadRunnable runnable : runnables) {
                         runnable.resume();
                     }
@@ -178,7 +197,7 @@ public class DownloadManager {
                 allDownloadList.add(downloadRunnable);
                 mThreadPool.execute(downloadRunnable);
             }
-            mDownloadRunnables.put(url,allDownloadList);
+            mDownloadRunnables.put(url, allDownloadList);
         }
     }
 
@@ -196,6 +215,13 @@ public class DownloadManager {
         } else {
             int count = (int) (length / minSize);
             return count > MAX_COUNT ? MAX_COUNT : count;
+        }
+    }
+
+    @SuppressLint("RestrictedApi")
+    private void invokeCallback(DownloadCallback callback,Runnable runnable) {
+        if (callback != null) {
+            ArchTaskExecutor.getMainThreadExecutor().execute(runnable);
         }
     }
 }

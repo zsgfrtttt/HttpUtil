@@ -11,6 +11,9 @@ public interface DownloadCallback {
 
     void onFailure(int code, String msg);
 
-    void progress(int progress);
+    /**
+     * 0 - 100
+     */
+    void onProgress(int progress);
 }
 

@@ -1,7 +1,11 @@
 package com.csz.okhttp.download;
 
+import android.annotation.SuppressLint;
+import android.os.Handler;
 import android.os.Process;
 import android.util.Log;
+
+import androidx.arch.core.executor.ArchTaskExecutor;
 
 import com.csz.okhttp.download.db.DownloadEntity;
 import com.csz.okhttp.http.DownloadCallback;
@@ -52,9 +56,9 @@ public class DownloadRunnable implements Runnable {
         this.mEntity = entity;
     }
 
+    @SuppressLint("RestrictedApi")
     @Override
     public void run() {
-        Log.i("csz", "start   " + threadCount.intValue());
         //设置线程优先级，越小优先级越高
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
 
@@ -68,8 +72,13 @@ public class DownloadRunnable implements Runnable {
         while (!mDone && mRetryCount < 3) {
             try {
                 Response response = HttpManager.getInstance().syncRequest(url, incrementStart, end);
-                if (response == null && mDownloadCallback != null) {
-                    mDownloadCallback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
+                if (response == null) {
+                    invokeCallback(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDownloadCallback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
+                        }
+                    });
                     return;
                 }
                 randomAccessFile = new RandomAccessFile(file, "rw");
@@ -86,22 +95,38 @@ public class DownloadRunnable implements Runnable {
                     fileOutputStream.write(bytes, 0, len);
                     progress += len;
                     mEntity.setProgress_position(progress);
-                    if (mDownloadCallback != null) {
-                        mDownloadCallback.progress((int) (totalProgress.addAndGet(len) * 100 / contentLength));
-                    }
+                    int finalLen = len;
+                    invokeCallback(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDownloadCallback.onProgress((int) (totalProgress.addAndGet(finalLen) * 100 / contentLength));
+                        }
+                    });
                     fileOutputStream.flush();
                 }
-                CloseUtil.close(randomAccessFile, fileOutputStream);
+                //inputStream必须关闭,否则文件可能不是最终写入文件
+                CloseUtil.close(inputStream, randomAccessFile, fileOutputStream);
                 mDone = true;
                 //等于0证明多线程的其他任务也下载完成
                 if (threadCount.decrementAndGet() == 0) {
                     DownloadManager.getInstance().finish(url);
-                    Log.i("csz", "end   " + threadCount.intValue());
-                    mDownloadCallback.onSuccess(file);
+                    invokeCallback(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDownloadCallback.onSuccess(file);
+                        }
+                    });
                 }
             } catch (IOException e) {
+                Log.i("csz", "DownloadRunnable   " + e.getMessage());
                 e.printStackTrace();
-                mDownloadCallback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
+                invokeCallback(new Runnable() {
+                    @Override
+                    public void run() {
+                        mDownloadCallback.onFailure(HttpError.NETWORK_ERROR.getCode(), HttpError.NETWORK_ERROR.getMsg());
+                    }
+                });
+
             } finally {
                 CloseUtil.close(randomAccessFile, fileOutputStream);
                 DownloadDBHepler.getInstance().insertOrReplace(mEntity);
@@ -112,6 +137,13 @@ public class DownloadRunnable implements Runnable {
             }
         }
 
+    }
+
+    @SuppressLint("RestrictedApi")
+    private void invokeCallback(Runnable runnable) {
+        if (mDownloadCallback != null) {
+            ArchTaskExecutor.getMainThreadExecutor().execute(runnable);
+        }
     }
 
     /**
@@ -134,17 +166,26 @@ public class DownloadRunnable implements Runnable {
      * @param incrementStart
      * @return
      */
+    @SuppressLint("RestrictedApi")
     private boolean checkDownloadCompleted(File file, long incrementStart) {
         if (incrementStart >= end) {
             //增加已下载的字节
             totalProgress.addAndGet(end - start);
-            if (mDownloadCallback != null) {
-                mDownloadCallback.progress((int) (totalProgress.get() * 100 / contentLength));
-            }
+            invokeCallback(new Runnable() {
+                @Override
+                public void run() {
+                    mDownloadCallback.onProgress((int) (totalProgress.get() * 100 / contentLength));
+                }
+            });
             //等于0证明多线程的其他任务也下载完成
             if (threadCount.decrementAndGet() == 0) {
                 DownloadManager.getInstance().finish(url);
-                mDownloadCallback.onSuccess(file);
+                invokeCallback(new Runnable() {
+                    @Override
+                    public void run() {
+                        mDownloadCallback.onSuccess(file);
+                    }
+                });
             }
             return true;
         }

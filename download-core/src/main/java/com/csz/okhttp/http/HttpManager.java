@@ -1,5 +1,9 @@
 package com.csz.okhttp.http;
 
+import android.annotation.SuppressLint;
+
+import androidx.arch.core.executor.ArchTaskExecutor;
+
 import com.csz.okhttp.download.FileStorageManager;
 
 import org.jetbrains.annotations.NotNull;
@@ -87,13 +91,20 @@ public class HttpManager {
      * @param url
      * @return
      */
+    @SuppressLint("RestrictedApi")
     public void asyncRequest(String url, @NotNull final DownloadCallback callback) {
         final Request request = new Request.Builder().url(url).build();
         mOkHttpClient.newCall(request).enqueue(new Callback() {
+
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 if (callback != null){
-                     callback.onFailure(HttpError.NETWORK_ERROR.getCode(),e.getMessage());
+                    ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onFailure(HttpError.NETWORK_ERROR.getCode(),e.getMessage());
+                        }
+                    });
                 }
             }
 
@@ -101,7 +112,12 @@ public class HttpManager {
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 if (callback == null) return;
                 if (!response.isSuccessful()){
-                    callback.onFailure(response.code(),response.message());
+                    ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onFailure(response.code(),response.message());
+                        }
+                    });
                 } else {
                     File file = FileStorageManager.getInstance().getFileByName(call.request().url().toString());
                     FileOutputStream fileOutputStream = new FileOutputStream(file);
@@ -113,13 +129,25 @@ public class HttpManager {
                     while ((len = inputStream.read(bytes)) != -1){
                         fileOutputStream.write(bytes,0,len);
                         progress += len;
-                        callback.progress((int) (progress * 100 / total));
+                        long finalProgress = progress;
+                        ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                callback.onProgress((int) (finalProgress * 100 / total));
+                            }
+                        });
                     }
                     fileOutputStream.flush();
                     fileOutputStream.close();
-                    callback.onSuccess(file);
+                    ArchTaskExecutor.getMainThreadExecutor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onSuccess(file);
+                        }
+                    });
                 }
             }
         });
     }
+
 }

@@ -39,13 +39,8 @@ public class DownloadActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess(final File file) {
-                //由于系统原因file的length和MD5会有延迟
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                Log.i("csz","onSuccess   "+ file.length());
+                Toast.makeText(DownloadActivity.this, "download  succ", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -54,13 +49,8 @@ public class DownloadActivity extends AppCompatActivity {
             }
 
             @Override
-            public void progress(final int progress) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        seekBar.setProgress(progress);
-                    }
-                });
+            public void onProgress(final int progress) {
+                seekBar.setProgress(progress);
             }
         });
     }

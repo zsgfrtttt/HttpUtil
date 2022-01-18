@@ -78,6 +78,10 @@ public class DownloadManager {
         mDownloadTask.add(url);
 
         final List<DownloadEntity> list = DownloadDBHepler.getInstance().getAll(url);
+        int progress = calulateProgress(list);
+        if (callback != null) {
+            callback.onProgress(progress);
+        }
         HttpManager.getInstance().asyncRequest(url, new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
@@ -218,9 +222,33 @@ public class DownloadManager {
     }
 
     @SuppressLint("RestrictedApi")
-    private void invokeCallback(DownloadCallback callback,Runnable runnable) {
+    private void invokeCallback(DownloadCallback callback, Runnable runnable) {
         if (callback != null) {
             ArchTaskExecutor.getMainThreadExecutor().execute(runnable);
         }
+    }
+
+    /**
+     * @param list
+     * @return 0 -100
+     */
+    private int calulateProgress(List<DownloadEntity> list) {
+        long total = 0;
+        long downloaded = 0;
+        for (DownloadEntity entity : list) {
+            total += (entity.getEnd_position() - entity.getStart_position());
+            downloaded += entity.getProgress_position() ;
+        }
+        return total == 0 ? 0 : (int) (downloaded * 100 / total);
+    }
+
+    /**
+     * @param url
+     * @return 0 -100
+     */
+    public int getUrlDownloadProgress(String url){
+        final List<DownloadEntity> list = DownloadDBHepler.getInstance().getAll(url);
+        int progress = calulateProgress(list);
+        return progress;
     }
 }
